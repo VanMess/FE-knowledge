@@ -44,7 +44,7 @@ Vue.use(iview);
 
 ## 2. 使用 babel-loader 加载
 
-引入源码后， 编译环境**可能**会报错：
+引入源码后，webpack 编译**可能**会报错：
 
 ![webpack异常信息截图](../assets/iview-ac-debug/error-where-compile.png)
 
@@ -89,3 +89,4 @@ export default API;
 ```
 
 > 到这里，理论上 iview 的源码包已经导入，可以正常运行了，如果还有遇到其他问题，欢迎留言
+> 欢迎关注我的 [github](https://github.com/VanMess/FE-knowledge/)，未来会写更多的经验总结
