@@ -33,11 +33,11 @@
 
 分析调用的上下文代码后，发现在将 `AutoComplete` 组件的值设置为 `null` 时，会触发这个异常，我简化了调用的上下文代码，做了一个 [Demo](https://codepen.io/vanmess/pen/ZRJGma)，建议点进去看看，直观感受下， **记住：请打开控制台看报错信息**。
 
-从异常信息看，问题的核心是 `i-select` 组件发生 `TypeError: Cannot read property 'propsData' of undefined`，也就是有一些 `undefined` 值在预期之外地流入 `i-select` 逻辑中。
+从异常信息看，问题的核心是 `i-select` 组件发生 `TypeError: Cannot read property 'propsData' of undefined`，也就是有一些 `undefined` 值在预期之外地流入 `i-select` 逻辑中。问题本身已经解决了，本文做一个记录，记录如何一步一步解决此问题。
 
 ## 从源码 Debug
 
-首先，我们来看看，抛出异常的代码，如下：
+首先，从报错堆栈找到抛出异常的位置，代码如下：
 
 ```javascript
 var applyProp = function(node, propName, value) {
@@ -56,107 +56,128 @@ var applyProp = function(node, propName, value) {
 }.bind(undefined);
 ```
 
-默认情况下，我们引入 iview 库的方式为： `import iView from 'iview';`，入口是 `iview/dist/iview.js` 文件，这是经过编译的版本，
-上面这一段正是编译后的代码。编译后的代码，是面向机器而不是人的，所以在语义、结构等方面有些许损耗，不利于调试，因此，我们需要配备一个更友好的环境。
+> Tips:
+>
+> 报错语句中的 [`propsData` 属性](https://cn.vuejs.org/v2/api/#propsData)，在日常开发中接触的不多，
+> vue 官网解释的有点粗略：
+>
+> **创建实例时传递 props。主要作用是方便测试**
+>
+> 简单的说，就是 vue 会将父级组件传递的 props 属性合并成一个对象，该对象即为 `propsData` 属性。
 
-### 配置调试环境
-
-#### 1. 在开发环境中使用源码
-
-通常，引入 iview 库的方式如下：
+这是一段 babel 编译过的代码，看起来真心有些吃力，所以强烈建议先 [配置 iview 调试环境](https://juejin.im/post/5b2257e4518825748a579dad)，配置后，可以看到错误发生在 [src/components/select.vue](https://github.com/iview/iview/blob/2.0/src/components/select/select.vue#L113) 文件，源码为：
 
 ```javascript
-// main.js
-import Vue from "vue";
-import iview from "iview";
-
-Vue.use(iview);
+const applyProp = (node, propName, value) => {
+  return {
+    ...node,
+    componentOptions: {
+      ...node.componentOptions,
+      propsData: {
+        ...node.componentOptions.propsData,
+        [propName]: value
+      }
+    }
+  };
+};
 ```
 
-这里做一个修改，从 iview 源码直接：
+嗯，这样看起来清爽多了。上面的代码就只是个很简单的属性合并函数，确实是在这个函数触发的 bug，但问题的重点调用方传递过来的参数，不符合该函数的预期，追本溯源，接下来我们从几个方面分析问题：
+
+1.  何时调用 `applyProp` 函数？
+2.  参数 `node` 是为何物？
+3.  为什么会出现 `node.componentOptions` 值为 `undefined` 的情况？
+
+### 1. 何时调用 `applyProp` 函数？
+
+在 `src/components/select.vue` 文件中搜索，可以看到该函数只在 [计算器 `selectOptions`](https://github.com/iview/iview/blob/2.0/src/components/select/select.vue#L330) 被调用，简化后的调用代码：
 
 ```javascript
-// main.js
-import Vue from "vue";
-import iview from "iview/src/index";
+selectOptions() {
+    // ...
+    const slotOptions = (this.slotOptions || []);
+    // ...
+    if (this.autoComplete) {
+        // ...
 
-Vue.use(iview);
+        return slotOptions.map(node => {
+            if (node === selectedSlotOption || getNestedProperty(node, 'componentOptions.propsData.value') === this.value) {
+                return applyProp(node, 'isFocused', true);
+            }
+            return copyChildren(node, (child) => {
+                if (child !== selectedSlotOption) return child;
+                return applyProp(child, 'isFocused', true);
+            });
+        });
+    }
+    // ...
+},
 ```
 
-#### 2. 使用 babel-loader 加载
+结合 `applyProp` 源码，推测这里的意图给 `slotOptions` 项加上 `isFocused` 属性。但`selectOptions` 计算器代码太长，有太多的依赖： `slotOptions`、`focusIndex`、`values`、`autoComplete`...根据[计算属性的特性](https://juejin.im/post/5af1980a6fb9a07acb3cd4e3)可以推断，这些依赖的变更会触发 `selectOptions` 计算器重新执行计算，进而隐式调用了 `applyProp` 函数，也就是说，有太多种可能性，会导致 `applyProp` 被调用。
 
-引入源码后， 编译环境可能会报一个错：
+### 2. 参数 `node` 是为何物？
 
-![webpack异常信息截图](../assets/iview-ac-debug/error-where-compile.png)
-
-这是 [babel-loader](https://github.com/babel/babel-loader) 的配置造成。通常情况下，为了提升编译速度，会通过配置 `babel-loader` 忽略 `node_modules` 路径，
-此时是 webpack 会使用其他 loader 加载 `iview/src/index.js`，此时就有可能报错。
-因此，修改 `babel-loader`配置将 iview 包含进来即可，形如：
+回顾上面的 `selectOptions` 计算器，会迭代 `slotOptions` ，将数组项以 `node` 参数形式，传入 `applyProp`函数。在源码中搜索，确定 `slotOptions` 属性分别在两个地方被赋值：
 
 ```javascript
-{
-  test: /\.js$/,
-  loader: 'babel-loader',
-  include: [resolve('src'), resolve('test'), resolve('node_modules/webpack-dev-server/client'), resolve('node_modules/iview/src')]
+data () {
+    return {
+        // ...
+        slotOptions: this.$slots.default,
+        // ...
+    };
+},
+methods:{
+    // ...
+    updateSlotOptions(){
+        this.slotOptions = this.$slots.default;
+    },
+    // ...
 }
 ```
 
-#### 3. 修改 export 方式
+到这里已经可以确定， `slotOptions` 即为 `this.$slots.default`，即组件的默认插槽，打印 `slotOptions` 值：
 
-修改配置后，重新运行 webpack，又报了一个错：
+![slotOptions 值示例](../assets/iview-ac-debug/slotOptions-instance.png)
 
-![导出包异常报警](../assets/iview-ac-debug/iview-src-export-warn.png)
+可以看到，这是一个个 [`vnode` 实例](https://github.com/snabbdom/snabbdom)。
 
-进入 `iview/src/index.js` 文件，发现导出语句是这样的：
+> 这里可以引发另外一个思考：为什么要通过 `data` 属性，保存 `this.$slots.default` 值？
+>
+> 组件渲染时，调用相应的 `render` 函数，生成 `vnode` 树，但 `vnode` 树并不在 vue 的响应系统中 —— `vnode` 的变化无法被捕捉到，
+> 所以，为了监控 vnode 的变化，iview 将其加入 data 属性，为此，iview 还专门加了一个组件 [`functional-options.vue`](https://github.com/iview/iview/blob/2.0/src/components/select/functional-options.vue) 做 `vnode` 更新的检测。
+> 当我们需要监控响应系统外的变化时，这种方案确实简单粗暴直接，但在 `i-select` 这种场景下，其实有更优雅的解决方案：
+>
+> **使用 [`slot-scope`](https://cn.vuejs.org/v2/api/#vm-scopedSlots) 替代简单的 `slot`**
+>
+> 这是事关组件设计，非常值得思考的一个点，回头另起一篇文章讨论。
+
+### 3. 为什么会出现 `node.componentOptions` 值为 `undefined` 的情况？
+
+我们回头看看 `slotOptions` 值：
+
+![slotOptions 值示例](../assets/iview-ac-debug/slotOptions-instance.png)
+
+数组的第一项有些奇怪， `tag` 值为 `undefined`？展开此项，对象的属性值如下：
+
+![slotOptions 第一项值](../assets/iview-ac-debug/slotOptions-first.png)
+
+> Tips: 这是 `vnode` 中的 text 节点。
+
+在该项上执行计算属性 `selectOptions` 中的求值函数：
 
 ```javascript
-module.exports.default = module.exports = API; // eslint-disable-line no-undef
+getNestedProperty(node, "componentOptions.propsData.value");
 ```
 
-不知道是为了兼容旧版本，还是为了兼容其他环境，iview 在这里选择 `exports` 形式的包导出方法，额，这里先不深究，将代码直接改为：
+取得的值刚好为 `null`。好了，问题到这里已经找到了，异常触发的步骤如下：
 
-```javascript
-// module.exports.default = module.exports = API; // eslint-disable-line no-undef
-export default API;
-```
+1.  计算器 `selectOptions` 遍历 `this.$slots.default` 节点
+2.  查找 `vnode` 节点中，值等于 `value` 属性的节点
+3.  当 `value` 值为 `null` 时， `$slots.default` 第一个文本节点符合条件
+4.  将该文本节点传入 `applyProps` 函数
+5.  `applyProps` 函数执行 `node.componentOptions.propsData` 求值，但文本节点的 `componentOptions` 属性为 `undefined`
+6.  报错
 
-> 到这里，理论上程序已经可以正常运行了，如果还有遇到其他问题，欢迎在文章下面留言
-
-### 重新审查异常信息
-
-[vue-cli](https://github.com/vuejs/vue-cli) 初始化的，
-
-默认情况下，我们引入 iview 库的方式为： `import iView from 'iview';`。这里为了方便调试，修改为 `import iView from 'iview/src/index';`。
-
-修改引用后，会报错：
-
-修改 babel-loader 配置为：
-
-```javascript
-{
-  test: /\.js$/,
-  loader: 'babel-loader',
-  include: [
-    utils.resolve('src'),
-    utils.resolve('test'),
-    utils.resolve('node_modules/iview/src')
-  ]
-}
-```
-
-重新运行 `npm start`
-
-iview 导出报的语句 `module.exports.default = module.exports = API;`
-
-计算 options 的逻辑有问题
-
-当把值设置为 `null`，会导致生成多一个 `node`:
-
-```
-{tag: undefined, data: undefined, children: undefined, text: " ", elm: undefined, …}
-```
-
-解决方案：
-
-1.  应用层面，不要设置值为 null
-2.  在 `select.vue` 组件中做过滤
+### 解决问题
