@@ -1,12 +1,16 @@
 # 分享一个 iView 调试案例
 
-> 本文记录笔者在工作中，遇到的一个 iview 的 `AutoComplete` 组件的 bug，以及详细调试过程。
-> 本文不对 iview 做过多讲解，也没有多少源码分析的意味，更多是想表达出在使用开源框架遇到问题时，
-> 如何根据问题的表征，一步一步推导出问题的源头、找出解决方案。
+> **当我们遇到开源框架的 bug 时，应该如何处理？**
+> Google？查文档？提 issue ？
+> 或许，**我们还能尝试自己在源码中找出 bug 的原因！**
+>
+> 本文分享笔者在工作中，遇到一个 iview 的 bug 时，
+> 如何根据问题的表征，一步一步推导出问题的源头，最终找出解决方案的过程。
+> 希望对尊贵的读者朋友们有些许启发。
 
 ## 版本升级触发的 bug
 
-最近抽空对项目用的 iView 版本做升级，从 2.6.0 升到 2.14.2，原以为不会有太大问题，但在 [AutoComplete](https://www.iviewui.com/components/auto-complete) 组件上报了一些错误：
+最近抽空对项目用的 iView 版本做升级，从 2.6.0 升到 **2.14.2**，原以为不会有太大问题，但在 [AutoComplete](https://www.iviewui.com/components/auto-complete) 组件上报了一些错误：
 
 ![异常信息截图](../assets/iview-ac-debug/bug-report.png)
 
@@ -38,6 +42,8 @@ export default {
   },
   methods: {
     reset() {
+      // 当设置 AutoComplete 组件值为null时
+      // 会触发文中所说的bug
       this.value = null;
     }
   }
@@ -45,7 +51,7 @@ export default {
 </script>
 ```
 
-从异常信息看，问题的核心是 `i-select` 组件发生 `TypeError: Cannot read property 'propsData' of undefined`，也就是有一些 `undefined` 值在预期之外地流入 `i-select` 逻辑中。问题本身已经解决了，本文做一个记录，记录如何一步一步解决此问题。
+从异常信息看，问题的核心是 `i-select` 组件发生 `TypeError: Cannot read property 'propsData' of undefined`，也就是有一些 `undefined` 值在预期之外地流入 `i-select` 逻辑中。搜了一圈，没找到解决方案，github 上的 issue 也没什么相关的问题，只好自己解决了。
 
 ## 从源码 Debug
 
@@ -94,7 +100,7 @@ const applyProp = (node, propName, value) => {
 };
 ```
 
-嗯，这样看起来清爽多了。上面的代码就只是个很简单的属性合并函数，确实是在这个函数触发的 bug，但问题的重点调用方传递过来的参数，不符合该函数的预期，追本溯源，接下来我们从几个方面分析问题：
+嗯，这样看起来清爽多了。上面的代码就只是个很简单的属性合并函数，确实是在这个函数触发的 bug，但问题的重点是调用方传递过来的参数，不符合该函数的预期，追本溯源，接下来我们从几个方面分析问题：
 
 1.  何时调用 `applyProp` 函数？
 2.  参数 `node` 是为何物？
@@ -126,11 +132,14 @@ selectOptions() {
 },
 ```
 
-结合 `applyProp` 源码，推测这里的意图是给符合条件的 `slotOptions` 项加上 `isFocused` 属性。但`selectOptions` 计算器代码太长，有太多的依赖： `slotOptions`、`focusIndex`、`values`、`autoComplete`...根据[计算属性的特性](https://juejin.im/post/5af1980a6fb9a07acb3cd4e3)可以推断，这些依赖的变更会触发 `selectOptions` 计算器重新执行计算，进而隐式调用了 `applyProp` 函数，也就是说，有太多种可能性，会导致 `applyProp` 被调用。
+结合 `applyProp` 源码，推测这里的意图是给符合条件的 `slotOptions` 项加上 `isFocused` 属性。
+从 `src/components/select.vue` 组件的代码推断，计算器 `selectOptions` 用于表示组件选项中，被选中的项。
+
+但 `selectOptions` 计算器代码太长，有太多的依赖： `slotOptions`、`focusIndex`、`values`、`autoComplete`...根据[计算属性的特性](https://juejin.im/post/5af1980a6fb9a07acb3cd4e3)可以推断，这些依赖的变更会触发 `selectOptions` 计算器重新执行计算，进而隐式调用了 `applyProp` 函数，也就是说，有太多种可能性，会导致 `applyProp` 被调用。如果要一一追溯这些可能性，问题会变的非常庞大，所以这里换一种思路： `selectOptions` 计算器会将什么样的参数传递给 `applyProp` 函数？
 
 ### 2. 参数 `node` 是为何物？
 
-在上面的 `selectOptions` 计算器，会迭代 `slotOptions` ，将数组项以 `node` 参数形式，传入 `applyProp`函数。在源码中搜索，确定 `slotOptions` 属性分别在两个地方被赋值：
+在上面的 `selectOptions` 计算器源码的最后，会迭代 `slotOptions` 数组，将数组项以 `node` 参数形式，传入 `applyProp` 函数，那么我们只需要确定 `slotOptions` 是什么类型的数组就可以确定 `node` 参数的类型。在源码中搜索，确定 `slotOptions` 属性分别在两个地方被赋值：
 
 ```javascript
 data () {
@@ -149,7 +158,7 @@ methods:{
 }
 ```
 
-可以看出， `slotOptions` 只是 `this.$slots.default` 的一个 **替身**，即组件的默认插槽，打印 `slotOptions` 值得：
+可以看出， `slotOptions` 只是 `this.$slots.default` ，即组件的默认插槽的一个 **替身**，打印 `slotOptions` 值得：
 
 ![slotOptions 值示例](../assets/iview-ac-debug/slotOptions-instance.png)
 
@@ -245,4 +254,12 @@ selectOptions() {
 
 ## 总结
 
-到这里，相信大家
+问题到这里结束了吗？并没有！这么一个小小的 bug，其实可以引发非常多值得思考的点：
+
+1.  iview 中为什么需要监控 `vnode` 值的变化？
+2.  为什么 `$slots.default` 值会出现预期外的文本节点？
+3.  如何用 [`slot-scope`](https://cn.vuejs.org/v2/api/#vm-scopedSlots) 方式，实现更优雅的代码结构？
+
+相关的讨论已经在编写中，我们下次再会。
+
+> 欢迎关注我的 [github](https://github.com/VanMess/FE-knowledge/)，未来会持续不断写一些原创技术文章，不毒舌，不吐槽，只是专注于技术本身。
