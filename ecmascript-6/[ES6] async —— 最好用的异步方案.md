@@ -10,7 +10,7 @@ JS 运行时被设计为 **单线程** 结构，因此，在诞生之初，设�
 
 ## `async` 用法解析
 
-`async/await` 是一对相辅相成的关键字， async 用于声明一个函数是异步的；await 则用于声明关键字后面的函数调用是异步的。注意 async 函数并不要求必须包含 await 语句，但 await 语句只能出现在 async 函数中。举个简单的例子：
+`async/await` 是成对的语法结构， async 用于声明一个函数是异步的；await 则用于声明关键字后面的函数调用是异步的。注意 async 函数并不要求必须包含 await 语句，但 await 语句只能出现在 async 函数中。举个简单的例子：
 
 ```javascript
 async function foo() {
