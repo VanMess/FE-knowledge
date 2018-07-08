@@ -27,7 +27,7 @@
 1.  async 的陷阱
     - [没有相互以来的异步调用，却有先后等待的次序](https://medium.freecodecamp.org/avoiding-the-async-await-hell-c77a0fb71c4c)
 
-## tips:
+## 资料
 
 https://hackernoon.com/6-reasons-why-javascripts-async-await-blows-promises-away-tutorial-c7ec10518dd9
 https://medium.com/@rafaelvidaurre/truly-understanding-async-await-491dd580500e
