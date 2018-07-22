@@ -1,5 +1,7 @@
 # Symbol
 
+相关联的内容还有 ： Reflect、Proxies
+
 ## 作为属性名使用
 
 Symbol 可作为属性名使用，特点是不可更改，也就避免了拼写错误
@@ -55,3 +57,18 @@ ES6 将很多行为，通过 Symbol 属性开放，被称为 well-know 属性，
 
 1.  toPromitive 的用法？
 2.  按照书中的描述，合适执行强制类型转换？
+
+## 兼容性
+
+从 [caniuse](http://kangax.github.io/compat-table/es6/#test-Symbol) 数据来看，兼容性不是特别好，babel 也不太支持转换
+
+## 参考资料
+
+1.  https://www.keithcirkel.co.uk/metaprogramming-in-es6-symbols/
+
+## 问题
+
+1.  什么是元编程？
+2.  执行环境？
+3.  ES 的一个进化方向就是元编程，但是元编程到底有什么特别的呢？
+4.  Symbol and Reflection
