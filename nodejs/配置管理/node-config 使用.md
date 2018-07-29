@@ -18,7 +18,7 @@
 11. 可以通过 `config/custom-environment-variables.json` 文件定义一些需要从环境变量中获取的配置值，这些配置同样适用于属性值的覆盖机制，这是最高级别的覆盖
 12. 有两种方法获取配置值：get 函数、对象语法，get 函数在获取不存在的值时，会报异常，对象语法不会。无论哪种语法，都需注意避免使用保留字：get/has/util，否则会覆盖原来的功能函数
 
-NODE_APP_INSTANCE 参数配合 pm2：
+NODE_APP_INSTANCE 参数配合 pm2： 
 
 ```javascript
 module.exports = {
@@ -80,6 +80,11 @@ Object.defineProperty(object, property, {
 ```
 
 所以在尝试写的时候，会报异常
+
+## 官方提供的集成方案：
+
+1. [加密](https://github.com/lorenwest/node-config/wiki/Securing-Production-Config-Files)
+2. [webpack](https://github.com/lorenwest/node-config/wiki/Webpack-Usage)，有四种方法
 
 ## 问题
 
