@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+		<title>mxgraph Example</title>
+		<style>
+			#container {
+				background: url('../../assets/grid.gif');
+			}
+		</style>
+		<!-- Sets the basepath for the library if not in same directory -->
+		<script type="text/javascript">
+			mxBasePath = '//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/src';
+		</script>
+	</head>
+	<body>
+		<div id="container" style="width: 300px; height: 200px;"></div>
+
+		<script src="//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/mxClient.min.js"></script>
+		<script type="text/javascript">
+			function run(container) {
+				const geo = new mxGeometry(60, 40, 100, 100);
+				// geo.translate(130, 0);
+				// geo.rotate(170, new mxPoint(130, 140));
+				const cell = new mxCell(null, geo, 'shape=triangle;');
+				// 必须设定图元类型，才能正确地渲染
+				cell.vertex = true;
+				const cellShadow = cell.clone();
+				cellShadow.geometry.rotate(40, new mxPoint(60, 40));
+				const root = new mxCell();
+				root.insert(cell);
+				root.insert(cellShadow);
+
+				const model = new mxGraphModel(root);
+
+				new mxGraph(container, model);
+
+				cell.setGeometry(geo);
+			}
+
+			window.addEventListener('load', () => {
+				run(document.getElementById('container'));
+			});
+		</script>
+	</body>
+</html>

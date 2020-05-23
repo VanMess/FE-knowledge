@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+		<title>mxgraph Example</title>
+		<style>
+			#container {
+				background: url('../../assets/grid.gif');
+			}
+		</style>
+		<!-- Sets the basepath for the library if not in same directory -->
+		<script type="text/javascript">
+			mxBasePath = '//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/src';
+		</script>
+	</head>
+	<body>
+		<div id="container" style="width: 300px; height: 200px;"></div>
+
+		<script src="//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/mxClient.min.js"></script>
+		<script type="text/javascript">
+			// 继承 mxShape 基类，扩展自定义图形类
+			class CustomShape extends mxShape {
+				constructor() {
+					super();
+				}
+
+				paintBackground(c, x, y, w, h) {
+					c.translate(x, y);
+
+					// Head
+					c.ellipse(w / 4, 0, w / 2, h / 4);
+					c.fillAndStroke();
+
+					c.begin();
+					c.moveTo(w / 2, h / 4);
+					c.lineTo(w / 2, (2 * h) / 3);
+
+					// Arms
+					c.moveTo(w / 2, h / 3);
+					c.lineTo(0, h / 3);
+					c.moveTo(w / 2, h / 3);
+					c.lineTo(w, h / 3);
+
+					// Legs
+					c.moveTo(w / 2, (2 * h) / 3);
+					c.lineTo(0, h);
+					c.moveTo(w / 2, (2 * h) / 3);
+					c.lineTo(w, h);
+					c.end();
+
+					c.stroke();
+				}
+			}
+
+			// 需要在渲染器 mxCellRenderer 中注册图形
+			mxCellRenderer.registerShape('customShape', CustomShape);
+
+			function run(container) {
+				const cell = new mxCell(
+					'Hello world!',
+					new mxGeometry(100, 50, 50, 100),
+					// 依然通过style参数的 shape 属性指定图形类别
+					'shape=customShape'
+				);
+				cell.vertex = true;
+
+				const model = new mxGraphModel(cell);
+				new mxGraph(container, model);
+			}
+
+			window.addEventListener('load', () => {
+				run(document.getElementById('container'));
+			});
+		</script>
+	</body>
+</html>

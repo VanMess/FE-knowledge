@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+		<title>mxgraph Example</title>
+		<style>
+			#container {
+				background: url('../../assets/grid.gif');
+			}
+		</style>
+		<!-- Sets the basepath for the library if not in same directory -->
+		<script type="text/javascript">
+			mxBasePath = '//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/src';
+		</script>
+	</head>
+	<body>
+		<div id="container" style="width: 300px; height: 200px;"></div>
+
+		<script src="//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/mxClient.min.js"></script>
+		<script type="text/javascript">
+			function run(container) {
+				const cell = new mxCell('Hello world!', new mxGeometry(), 'strokeWidth=3;');
+				// 将cell设定为线段
+				cell.edge = true;
+				// 设置起始点
+				cell.geometry.setTerminalPoint(new mxPoint(60, 180), true);
+				// 设置终结点
+				cell.geometry.setTerminalPoint(new mxPoint(230, 20), false);
+				// 使用 points 定义多个中间节点
+				cell.geometry.points = [new mxPoint(70, 50), new mxPoint(120, 80)];
+
+				const model = new mxGraphModel(cell);
+				new mxGraph(container, model);
+			}
+
+			window.addEventListener('load', () => {
+				run(document.getElementById('container'));
+			});
+		</script>
+	</body>
+</html>

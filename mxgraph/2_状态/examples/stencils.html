@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+		<title>mxgraph Example</title>
+		<style>
+			#container {
+				background: url('../../assets/grid.gif');
+			}
+		</style>
+		<!-- Sets the basepath for the library if not in same directory -->
+		<script type="text/javascript">
+			mxBasePath = '//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/src';
+		</script>
+	</head>
+	<body>
+		<div id="container" style="width: 300px; height: 200px;"></div>
+
+		<script src="//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/mxClient.min.js"></script>
+		<script type="text/javascript">
+			// xml 形式定义图形内容
+			const shapes = `<shapes>
+          <shape name="or" aspect="variable">
+              <background>
+                  <path>
+                      <move x="0" y="0" />
+                      <quad x1="100" y1="0" x2="100" y2="50" />
+                      <quad x1="100" y1="100" x2="0" y2="100" />
+                      <close/>
+                  </path>
+              </background>
+              <foreground>
+                  <fillstroke/>
+              </foreground>
+          </shape>
+      </shapes>`;
+			// 将字符串的xml值解析为dom对象
+			const parser = new DOMParser();
+			const node = parser.parseFromString(shapes, 'text/xml');
+			// 注册画笔
+			mxStencilRegistry.addStencil('or', new mxStencil(node.firstChild));
+
+			function run(container) {
+				const cell = new mxCell(null, new mxGeometry(100, 50, 50, 100), 'shape=or');
+				cell.vertex = true;
+
+				const model = new mxGraphModel(cell);
+				new mxGraph(container, model);
+			}
+
+			window.addEventListener('load', () => {
+				run(document.getElementById('container'));
+			});
+		</script>
+	</body>
+</html>

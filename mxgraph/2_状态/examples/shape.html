@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+		<title>mxgraph Example</title>
+		<style>
+			#container {
+				background: url('../../assets/grid.gif');
+			}
+		</style>
+		<!-- Sets the basepath for the library if not in same directory -->
+		<script type="text/javascript">
+			mxBasePath = '//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/src';
+		</script>
+	</head>
+	<body>
+		<div id="container" style="width: 400px; height: 400px;"></div>
+
+		<script src="//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/mxClient.min.js"></script>
+		<script type="text/javascript">
+			function run(container) {
+				const shapes = [
+					'actor',
+					'cloud',
+					'cylinder',
+					'doubleEllipse',
+					'ellipse',
+					'hexagon',
+					'image;image=https://jgraph.github.io/mxgraph/docs/images/mxgraph_logo.gif',
+					'rectangle',
+					'rhombus',
+					'swimlane',
+					'triangle',
+				];
+				const root = new mxCell(null, new mxGeometry(), null);
+				for (let i = 0; i < shapes.length; i++) {
+					const shape = shapes[i];
+					const xOffset = i % 4,
+						yOffset = Math.floor(i / 4),
+						x = xOffset * 100 + 20,
+						y = yOffset * 100 + 20;
+					const geometry = new mxGeometry(x, y, 60, 60);
+					const cell = new mxCell(
+						shape.split(';')[0],
+						geometry,
+						`shape=${shape};verticalLabelPosition=bottom;spacingBottom=40`
+					);
+					cell.vertex = true;
+					root.insert(cell);
+				}
+				const model = new mxGraphModel(root);
+				new mxGraph(container, model);
+			}
+
+			window.addEventListener('load', () => {
+				run(document.getElementById('container'));
+			});
+		</script>
+	</body>
+</html>

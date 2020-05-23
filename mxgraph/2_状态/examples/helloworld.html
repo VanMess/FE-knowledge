@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+		<title>mxgraph Example</title>
+		<style>
+			#container {
+				background: url('../../assets/grid.gif');
+			}
+		</style>
+	</head>
+	<body>
+		<div id="container" style="width: 300px; height: 200px;"></div>
+
+		<script src="//cdn.jsdelivr.net/npm/mxgraph@4.1.1/javascript/mxClient.min.js"></script>
+		<script type="text/javascript">
+			function run(container) {
+				const cell = new mxCell('Hello world!', new mxGeometry(60, 80, 100, 100), 'fillColor=#ddd');
+				// 必须设定图元类型，才能正确地渲染
+				cell.vertex = true;
+
+				const model = new mxGraphModel(cell);
+				new mxGraph(container, model);
+			}
+
+			window.addEventListener('load', () => {
+				run(document.getElementById('container'));
+			});
+		</script>
+	</body>
+</html>
